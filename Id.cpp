@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <iostream>
 using namespace std;
 
@@ -7,7 +8,9 @@ void error(const char *msg) {
     exit(1);
 }
 
-class Id {
+#define MAX_ID_LEN  16
+
+class Id {      //静的配列版
 public:
     Id();                       //デフォルトコンストラクタ
     //~Id();                      //デストラクタ
@@ -17,11 +20,12 @@ public:
     void print(ostream *os);
     void set(const char *idStr);
 private:
-    int value;
+    char value[MAX_ID_LEN+1];
 };
 
 Id::Id() {
-    value = 0;
+    value[0] = '0';
+    value[1] = '\0';
 }
 void Id::print(ostream *os) {
     *os << "Id{" << value << "}";
@@ -31,8 +35,8 @@ ostream &operator<<(ostream &os, Id &theId) {
     return os;
 }
 void Id::set(const char *idStr) {
-    if (idStr==0) error("Bad idStr");
-    value = atoi(idStr);
+    if (idStr==0 || strlen(idStr)>MAX_ID_LEN) error("Bad idStr");
+    strcpy(value, idStr);
 }
 
 int main(int argc, char* argv[]) {
@@ -45,8 +49,6 @@ int main(int argc, char* argv[]) {
     cout << "id1=" << id1 << "\n";
     id2 = id1;
     cout << "id2=" << id2 << "\n";
-
-    id2.set(0);
 
     return 0;
 }
