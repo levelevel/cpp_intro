@@ -8,8 +8,9 @@
 #include <stdlib.h>     // to get exit()
 #include <string.h>     // to get strlen() and strcpy()
 #include <stdio.h>      // to get old-style input
-#include <iostream.h>   // to get new-style output
-#include <new.h>        // to get set_new_handler()
+#include <iostream>   // to get new-style output
+#include <new>        // to get set_new_handler()
+using namespace std;
 
 // big trouble if any word in the dictionary 
 // exceeds this ('\0' terminator included)
@@ -17,16 +18,16 @@
  
 // These are now C++ keywords, take them out if your compiler has them.
 // If not, use these definitions.
-typedef int bool;
-#define true 1
-#define false 0
+//typedef int bool;
+//#define true 1
+//#define false 0
  
 // length of hexword generalized 
 // You could have a puzzle with a different length, but we haven't seen any.
 #define hex 6
 
 // error exit
-void oops(char *msg) {
+void oops(const char *msg) {
   cerr << msg << "\n";
   exit(1);
 }
@@ -46,7 +47,7 @@ public:
     void operator=(String &s);      // assignment operator
     String(String &s);              // copy constructor
 
-    void set(char *s);              // set from char*
+    void set(const char *s);        // set from char*
     char *s();                      // return pointer to string
     char c(int n);                  // return nth char
     int length();                   // return length of string
@@ -83,7 +84,7 @@ String::String(String &s) {
 }
 
 // set value from string
-void String::set(char *s) {
+void String::set(const char *s) {
   delete[] str;                     // deallocate old string
   lth = strlen(s);                  // set length of new string
   str = new char[lth+1];            // alloc space for string and terminator
