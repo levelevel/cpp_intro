@@ -136,7 +136,7 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 class CwRule: public Rule {
 public:
-    bool accepts(String &word);
+    bool accepts(String &dword);
     void set(String &cmd);
 private:
     String cword;
@@ -145,12 +145,12 @@ private:
 // Test a word to see if it matches a crossword puzzle rule.
 // The rule is stored as a String with ?'s where any character
 // can match, and the rest of the characters must match exactly.
-bool CwRule::accepts(String &word) {
-    size_t len = word.length();
-    if (len!=cword.length()) return false;
-    for (size_t i=0; i<len; i++) {
+bool CwRule::accepts(String &dword) {
+    int len = dword.length();
+    if (len!=(int)cword.length()) return false;
+    for (int i=0; i<len; i++) {
         char c = cword[i];
-        if (c!='?' && c!=word[i]) return false;
+        if (c!='?' && c!=dword[i]) return false;
     }
     return true;
 }
@@ -158,6 +158,38 @@ bool CwRule::accepts(String &word) {
 // set crossword puzzle rule
 void CwRule::set(String &cmd) {
     cword = cmd;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// HwRule: class for hexword puzzle rules
+///////////////////////////////////////////////////////////////////////////////
+class HwRule: public Rule {
+public:
+    bool accepts(String &dword);
+    void set(String &cmd);
+private:
+    String hword;
+    const int hex = 6;
+};
+
+bool HwRule::accepts(String &dword) {
+    if ((int)dword.length()!=hex) return false;  //辞書の単語は6文字でなければならない
+    for (int d=hex; d<2*hex; d++) {
+        bool fwd = true, bwd = true;
+        int hlen = (int)hword.length();
+        for (int h=0; h<hlen; h++) {
+            char c = hword[h];
+            fwd = fwd && (c=='?' || c==dword[(d+h)%hex]);
+            bwd = bwd && (c=='?' || c==dword[(d-h)%hex]);
+        }
+        if (fwd || bwd) return true;
+    }
+    return false;
+}
+
+// set crossword puzzle rule
+void HwRule::set(String &cmd) {
+    hword = cmd;
 }
 
 int main(int argc, char* argv[]) {
