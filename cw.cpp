@@ -8,12 +8,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <iostream>
 #include <new>
 #include <string>
 using namespace std;
 
-const int MAX_WORD_SIZE = 256;
+const size_t MAX_WORD_SIZE = 256;
 
 // error exit
 void oops(const char* msg) {
@@ -44,7 +45,7 @@ public:
     char operator[](size_t pos) const;
     size_t length() const;          //文字列の長さを返す
 
-    void print(ostream *os);        //print
+    void print(ostream *os) const;  //print
     bool read(FILE *ifp);           //ファイルから文字列を読み込む
 
 private:
@@ -107,10 +108,10 @@ size_t String::length() const {
 }
 
 //print
-void String::print(ostream *os) {
+void String::print(ostream *os) const {
     *os << str;
 }
-ostream &operator<<(ostream &os, String &s) {
+ostream &operator<<(ostream &os, const String &s) {
     s.print(&os);
     return os;
 }
@@ -122,8 +123,8 @@ bool String::read(FILE *ifp) {
     fgets(buf, MAX_WORD_SIZE, ifp);
     if (feof(ifp)) return false;
     if (ferror(ifp)) oops("file read error");
-    int len = strlen(buf);
-    if (buf[len]=='\n') buf[len] = '\0';
+    size_t len = strlen(buf);
+    if (buf[len-1]=='\n') buf[--len] = '\0';
     set(buf);
     return true;
 }
@@ -137,7 +138,7 @@ bool String::read(FILE *ifp) {
 class Rule {
 public:
     //単語を検査し、基準に合っていれば真を返す。
-    virtual bool accept(String word) const = 0;
+    virtual bool accepts(const String &word) const = 0;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -145,8 +146,8 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 class CwRule: public Rule {
 public:
-    bool accepts(String &dword) const;
-    void set(String &cmd);
+    bool accepts(const String &dword) const;
+    void set(const String &cmd);
 private:
     String cword;
 };
@@ -154,10 +155,10 @@ private:
 // Test a word to see if it matches a crossword puzzle rule.
 // The rule is stored as a String with ?'s where any character
 // can match, and the rest of the characters must match exactly.
-bool CwRule::accepts(String &dword) const {
-    int len = dword.length();
-    if (len!=(int)cword.length()) return false;
-    for (int i=0; i<len; i++) {
+bool CwRule::accepts(const String &dword) const {
+    size_t len = dword.length();
+    if (len!=cword.length()) return false;
+    for (size_t i=0; i<len; i++) {
         char c = cword[i];
         if (c!='?' && c!=dword[i]) return false;
     }
@@ -165,7 +166,7 @@ bool CwRule::accepts(String &dword) const {
 }
 
 // set crossword puzzle rule
-void CwRule::set(String &cmd) {
+void CwRule::set(const String &cmd) {
     cword = cmd;
 }
 
@@ -174,11 +175,11 @@ void CwRule::set(String &cmd) {
 ///////////////////////////////////////////////////////////////////////////////
 class HwRule: public Rule {
 public:
-    bool accepts(String &dword) const;
-    void set(String &cmd);
+    bool accepts(const String &dword) const;
+    void set(const String &cmd);
 private:
     String hword;
-    const int hex = 6;
+    const size_t hex = 6;
 };
 
 // Test a word to see if it matches a hexword puzzle rule.
@@ -189,17 +190,17 @@ private:
 // 6 characters long, and the rule must match consecutive characters
 // in the dictionary word, going in either direction, possibly
 // wrapping around the end or beginning.
-bool HwRule::accepts(String &dword) const {
-    if ((int)dword.length()!=hex) return false;  //辞書の単語は6文字でなければならない
+bool HwRule::accepts(const String &dword) const {
+    if (dword.length()!=hex) return false;  //辞書の単語は6文字でなければならない
     // For every starting point d in the dictionary word,
     // we scan forward and backward from d to see if the rule matches.
     // Instead of d going from 0 to 6 it goes from 6 to 12 so we
     // can add or subtract (to go forward or backward) then take the
     // modulo 6 to get a character position in the dictionary word.
-    for (int d=hex; d<2*hex; d++) {
+    for (size_t d=hex; d<2*hex; d++) {
         bool fwd = true, bwd = true;
-        int hlen = (int)hword.length();
-        for (int h=0; h<hlen; h++) {
+        size_t hlen = hword.length();
+        for (size_t h=0; h<hlen; h++) {
             char c = hword[h];
             fwd = fwd && (c=='?' || c==dword[(d+h)%hex]);
             bwd = bwd && (c=='?' || c==dword[(d-h)%hex]);
@@ -211,7 +212,7 @@ bool HwRule::accepts(String &dword) const {
 }
 
 // set crossword puzzle rule
-void HwRule::set(String &cmd) {
+void HwRule::set(const String &cmd) {
     hword = cmd;
 }
 
@@ -223,11 +224,13 @@ class Scanner {
 public:
     Scanner();
     ~Scanner();
+    void print(ostream *os) const;
     void dict(const String &name);          // set dictionary file
     void scan(const Rule &the_rule) const;  // scan the dictionary with a rule
 private:
     void operator=(Scanner &s);
     Scanner(Scanner &s);
+    String dictName;
     FILE *dictionary;
 };
 
@@ -237,9 +240,18 @@ Scanner::Scanner() {
 Scanner::~Scanner() {
     if (dictionary) fclose(dictionary);
 }
+void Scanner::print(ostream *os) const {
+    *os << "Scanner{dictName=" << dictName << ", dictionary=" << dictionary << "}";
+}
+ostream &operator<<(ostream &os, Scanner &s) {
+    s.print(&os);
+    return os;
+}
+
 
 // set dictionary file
 void Scanner::dict(const String &name) {
+    dictName = name;
     dictionary = fopen(name.s(), "r");
     if (dictionary==0) oops("can't open dictionary");
 }
@@ -250,15 +262,60 @@ void Scanner::scan(const Rule &the_rule) const {
     rewind(dictionary);
     String word;
     while (word.read(dictionary)) {
-        if (the_rule.accept(word)) {
+        if (the_rule.accepts(word)) {
             cout << word << endl;
         }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// mainline code
+///////////////////////////////////////////////////////////////////////////////
+void help(void) {
+    cout << "Usage: c ?ook, h ????er, q\n";
+}
+
+void input_loop(const Scanner &the_scanner) {
+    String cmd;
+    CwRule cr;
+    HwRule hr;
+
+    help();
+    cout << "> " << flush;
+    while (cmd.read(stdin)) {
+        const char *w = cmd.s();
+        while (*w && isalnum(*w)) w++;  //コマンドを読み飛ばす
+        while (*w && isspace(*w)) w++;  //スペースを読み飛ばす
+        switch (cmd[0]) {
+        case 'q':
+            return;
+        case 'c':
+            cr.set(w);
+            the_scanner.scan(cr);
+            break;
+        case 'h':
+            hr.set(w);
+            the_scanner.scan(hr);
+            break;
+        default:
+            cout << "unrecognized command\n";
+        case '?':
+            help();
+            break;
+        }
+        cout << "> " << flush;
     }
 }
 
 int main(int argc, char* argv[]) {
     set_new_handler(out_of_mem);
     ios::sync_with_stdio();
-    String s = "abc";
-    cout << s << endl;
+    Scanner the_scanner;
+    String dictName;
+    argc--; argv++;
+    if (argc != 1) oops("must specify a single dictionary");
+    dictName.set(*argv);
+    the_scanner.dict(dictName);
+    cout << the_scanner << endl;
+    input_loop(the_scanner);
 }
