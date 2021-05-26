@@ -32,6 +32,7 @@ public:
     void set(const char *s);        //文字列を設定する
     const char *s();                //文字列を返す
     char c(size_t pos);             //posの位置の文字を返す
+    char operator[](size_t pos);
     size_t length();                //文字列の長さを返す
 
     void print(ostream *os);        //print
@@ -87,6 +88,9 @@ char String::c(size_t pos) {
     if (pos>=len) oops("string index error");
     return str[pos];
 }
+char String::operator[](size_t pos) {
+    return c(pos);
+}
 
 //文字列の長さを返す
 size_t String::length() {
@@ -97,12 +101,12 @@ size_t String::length() {
 void String::print(ostream *os) {
     *os << str;
 }
-
 ostream &operator<<(ostream &os, String &s) {
     s.print(&os);
     return os;
 }
 
+//ファイルから文字列を読み込む
 bool String::read(FILE *ifp) {
     char buf[MAX_WORD_SIZE];
     clearerr(ifp);
@@ -114,7 +118,47 @@ bool String::read(FILE *ifp) {
     set(buf);
     return true;
 }
-//ファイルから文字列を読み込む
+
+///////////////////////////////////////////////////////////////////////////////
+// Rule: class for rules that decide if a word matches some criterion.
+// This class defines the interface for the acceptance rule.
+// It has no default for accepts() so all the rules that can be instantiated
+// are derived from this.
+///////////////////////////////////////////////////////////////////////////////
+class Rule {
+public:
+    //単語を検査し、基準に合っていれば真を返す。
+    virtual bool accept(String word) = 0;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// CwRule: class for crossword puzzle rules
+///////////////////////////////////////////////////////////////////////////////
+class CwRule: public Rule {
+public:
+    bool accepts(String &word);
+    void set(String &cmd);
+private:
+    String cword;
+};
+
+// Test a word to see if it matches a crossword puzzle rule.
+// The rule is stored as a String with ?'s where any character
+// can match, and the rest of the characters must match exactly.
+bool CwRule::accepts(String &word) {
+    size_t len = word.length();
+    if (len!=cword.length()) return false;
+    for (size_t i=0; i<len; i++) {
+        char c = cword[i];
+        if (c!='?' && c!=word[i]) return false;
+    }
+    return true;
+}
+
+// set crossword puzzle rule
+void CwRule::set(String &cmd) {
+    cword = cmd;
+}
 
 int main(int argc, char* argv[]) {
     set_new_handler(out_of_mem);
