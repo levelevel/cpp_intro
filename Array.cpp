@@ -15,12 +15,14 @@ struct Array {
     using size_type = std::size_t;
     using iterator = T*;
     using const_iterator = const T*;
-    value_type storage[N];
-    pointer       data()       { return storage; }
-    const_pointer data() const { return storage; }
-    size_type     size() const { return N; }
-    reference       operator[](size_t n)       { return storage[n]; }
-    const_reference operator[](size_t n) const { return storage[n]; }
+
+    value_type storage[N];  //データ本体
+
+    pointer       data()       noexcept { return storage; }
+    const_pointer data() const noexcept { return storage; }
+    size_type     size() const noexcept { return N; }
+    reference       operator[](size_t n)       noexcept { return storage[n]; }
+    const_reference operator[](size_t n) const noexcept { return storage[n]; }
     reference at (size_t n) {
         if (n>=size()) throw std::out_of_range("Error: Out of Range");
          return storage[n];
@@ -29,10 +31,10 @@ struct Array {
         if (n>=size()) throw std::out_of_range("Error: Out of Range");
          return storage[n];
     }
-    reference       front()       { return storage[0]; }
-    reference       back ()       { return storage[N-1]; }
-    const_reference front() const { return storage[0]; }
-    const_reference back () const { return storage[N-1]; }
+    reference       front()       noexcept { return storage[0]; }
+    reference       back ()       noexcept { return storage[N-1]; }
+    const_reference front() const noexcept { return storage[0]; }
+    const_reference back () const noexcept { return storage[N-1]; }
     void print(std::ostream *os) const {
         *os << "{";
         for (std::size_t i=0; i<size(); ++i) {
@@ -46,12 +48,12 @@ struct Array {
             storage[i] = n;
         }
     }
-    iterator begin() { return storage; }
-    iterator end  () { return storage+N; }
-    const_iterator begin () const { return storage; }
-    const_iterator end   () const { return storage+N; }
-    const_iterator cbegin() const { return storage; }
-    const_iterator cend  () const { return storage+N; }
+    iterator       begin ()       noexcept { return storage; }
+    iterator       end   ()       noexcept { return storage+N; }
+    const_iterator begin () const noexcept { return storage; }
+    const_iterator end   () const noexcept { return storage+N; }
+    const_iterator cbegin() const noexcept { return storage; }
+    const_iterator cend  () const noexcept { return storage+N; }
 };
 
 template <typename T, size_t N>
