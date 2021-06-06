@@ -310,6 +310,11 @@ void input_loop(const Scanner &the_scanner) {
 int main(int argc, char* argv[]) {
     set_new_handler(out_of_mem);
     ios::sync_with_stdio();
+
+    String s = "abc";
+    const char *p = s;
+    cout << p << endl;
+
     Scanner the_scanner;
     String dictName;
     argc--; argv++;

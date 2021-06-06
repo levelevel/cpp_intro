@@ -1,0 +1,55 @@
+江添亮のC++入門
+
+・再帰関数
+https://cpp.rainy.me/008-loop.html#%E5%86%8D%E5%B8%B0%E9%96%A2%E6%95%B0
+1と0だけを使った10進数の整数を2進数に変換するプログラムを書いてみよう。
+→
+1と0だけを使った10進数の整数を2進数として解釈して整数に変換するプログラムを書いてみよう。
+（例がよくないのでどう表現してもわかりにくい）
+
+イテレーター詳細
+・前方イテレーター
+https://cpp.rainy.me/031-iterator-operations.html#%E5%89%8D%E6%96%B9%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%BF%E3%83%BC-2
+// constなオブジェクト
+iota_iterator immutable(0) ;
+→
+const iota_iterator immutable(0) ;
+
+vectorの実装：基礎
+・ネストされた型名
+https://cpp.rainy.me/033-vector-implementation.html#%E3%83%8D%E3%82%B9%E3%83%88%E3%81%95%E3%82%8C%E3%81%9F%E5%9E%8B%E5%90%8D
+通常std::size_tが使われる。
+size_type = std::size_t ;
+→
+using size_type = std::size_t ;
+
+通常std::ptrdiff_tが使われる。
+difference_type = std::ptrdiff_t ;
+→
+using difference_type = std::ptrdiff_t ;
+
+これを素直に考えると、ポインター1つ、整数2つ、アロケーター1つの4つのデータメンバーになる。
+size_type valid_size = nullptr ;
+size_type allocated_size = nullptr ;
+→
+size_type valid_size = 0 ;
+size_type allocated_size = 0 ;
+
+・vectorの実装 : メモリー確保
+https://cpp.rainy.me/034-vector-memory-allocation.html#allocate-deallocate
+deallocate(ptr)はポインターptrを解放する。
+→
+deallocate()はクラス内に確保しているポインターfirstを解放する。
+
+・reserveの実装
+https://cpp.rainy.me/034-vector-memory-allocation.html#reserve%E3%81%AE%E5%AE%9F%E8%A3%85
+C++20に入る見込みの標準ライブラリ、std::scope_exitを使う。
+→
+入っていない？
+
+・resize
+https://cpp.rainy.me/034-vector-memory-allocation.html#resize
+size(sz, value)は、追加の引数を取るほか、construct( iter )の部分がconstruct( iter, value )に変わるだけだ。
+→
+resize(sz, value)は、追加の引数を取るほか、construct( last )の部分がconstruct( last, value )に変わるだけだ。
+

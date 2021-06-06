@@ -2,15 +2,17 @@
 #include <iterator>
 #include <algorithm>
 #include <vector>
+#include <array>
 
 template <typename T, typename Allocator = std::allocator<T>>
 class vector {
 public:
     using value_type            = T;
     using pointer               = T*;
-    using const_pointer         = const pointer;
+    using const_pointer         = const T*;
     using reference             = value_type&;
-    using const_reference       = const reference;
+//  using const_reference       = const reference;
+    using const_reference       = const value_type&;
     using allocator_type        = Allocator;
     using size_type             = std::size_t;
     using difference_type       = std::ptrdiff_t;
@@ -52,22 +54,27 @@ public:
     vector(size_type size, const allocator_type & alloc = Allocator()) : vector(alloc) {
         std::cout << "Construct1\n";
         resize(size);
-        std::cout << "Construct1 end\n";
     }
     vector(size_type size, const_reference value, const allocator_type & alloc = Allocator()) : vector(alloc) {
         std::cout << "Construct2\n";
         resize(size, value);
-        std::cout << "Construct2 end\n";
     }
+    template<typename InputIterator, typename = std::_RequireInputIter<InputIterator> >
+    vector(InputIterator first, InputIterator last, const allocator_type & alloc = Allocator()) : vector(alloc) {
+        std::cout << "Construct3\n";
+        //reserve(std::distance(first, last));
+        reserve(last-first);
+        for (auto i=first; i!=last; ++i) push_back(*i);
+    }
+    vector(std::initializer_list<value_type> init, const Allocator & = Allocator())
+        : vector(std::begin(init), std::end(init), alloc) {}
     ~vector() {
         std::cout << "Destruct\n";
         clear();        //要素を末尾から先頭に向かう順番で破棄
         deallocate();   //生のメモリーを開放する
-        std::cout << "Destruct end\n";
     }
     vector(const vector &v);
     vector &operator=(const vector &v);
-    void push_back(const T &v);
     reference       operator[](size_type i)       noexcept { return first[i]; }
     const_reference operator[](size_type i) const noexcept { return first[i]; }
     reference at(size_type i) {
@@ -102,7 +109,7 @@ public:
     bool empty() const noexcept { return begin()==end(); }
     void reserve(size_type sz) {
         if (sz<=capacity()) return;
-        auto ptr = allocate(sz);    //動的メモリ確保
+        auto ptr = allocate(sz);    //指定されたサイズの動的メモリ確保
         auto old_first    = first;
         auto old_last     = last;
         auto old_capacity = capacity();
@@ -120,17 +127,15 @@ public:
             }
         traits::deallocate(alloc, old_first, old_capacity);
     }
-    void resize(size_type sz) {
-        std::cout << "Resize1\n";
-        if (sz<size()) {
+    void resize(size_type sz) { //要素数を変更する
+        if (sz<size()) {        //要素が減る場合、末尾から破棄する
             auto diff = size() - sz;
             destroy_until(rbegin()+diff);
             last = first + sz;
-        } else if (sz>size()) {
+        } else if (sz>size()) { //要素が増える場合、末尾に要素を追加する
             reserve(sz);
             for (; last!=reserved_last; last++) construct(last);
         }
-        std::cout << "Resize1 end\n";
     }
     void resize(size_type sz, const_reference value) {
         if (sz<size()) {
@@ -138,13 +143,61 @@ public:
             destroy_until(rbegin()+diff);
             last = first + sz;
         } else if (sz>size()) {
-            reserve(sz, value);
-            for (; last!=reserved_last; last++) construct(last);
+            reserve(sz);
+            for (; last!=reserved_last; last++) construct(last, value);
         }
+    }
+    void shrink_to_fit() {      //メモリを要素数切り詰める
+        if (size()==capacity()) return;
+        auto ptr = allocate(size());
+        auto current_size = size();
+        for (auto raw_ptr=ptr, iter=begin(); iter!=end(); ++raw_ptr, ++iter) construct(raw_ptr, *iter);
+        clear();        //要素を末尾から先頭に向かう順番で破棄
+        deallocate();   //生のメモリーを開放する
+        first = ptr;
+        last  = ptr + current_size;
+        reserved_last = last;
+    }
+    void push_back(const_reference value) {
+        auto cap = capacity();
+        if (size()+1 > cap) {
+            cap = cap?cap*2:8;
+            reserve(cap);
+        }
+        construct(last, value);
+        ++last;
+    }
+    void print(std::ostream *os) const {
+        *os << "{";
+        for (std::size_t i=0; i<size(); ++i) {
+            if (i) *os << ", ";
+            *os << first[i];
+        }
+        *os << "}";
     }
 };
 
+template <typename T>
+std::ostream &operator<<(std::ostream &os, const vector<T> &v) {
+    v.print(&os);
+    return os;
+}
+
 int main() {
-    std::vector<int> sv(10, 5);
-    vector<int> v(10, 5);
+    vector<int> v2(10,99);
+    std::cout << "v2" << v2 << std::endl;
+    v2.resize(5);
+    std::cout << "v2" << v2 << std::endl;
+    for (std::size_t i=0; i<10; ++i) v2.push_back(i+5);
+    std::cout << "v2" << v2 << std::endl;
+
+    v2.reserve(100);
+    v2.shrink_to_fit();
+
+    std::array<int,5> a3 = {1,2,3,4,5};
+    vector<int> v3(std::begin(a3), std::end(a3));
+    std::cout << "v2" << v3 << std::endl;
+
+    vector<int> v4 = {1,2,3,4,5,6};
+    std::cout << "v4" << v4 << std::endl;
 }
