@@ -35,7 +35,7 @@ private:
     void construct(pointer ptr, const_reference value) { traits::construct(alloc, ptr, value); }
     void construct(pointer ptr, value_type &&value) { traits::construct(alloc, ptr, std::move(value)); }
     void destroy(pointer ptr) { traits::destroy(alloc, ptr); }
-    void destroy_until(reverse_iterator rend) { //末尾(rbegin())から要素を破棄する
+    void destroy_until(reverse_iterator rend) { //末尾(rbegin())から指定の要素までを破棄する
         for (auto riter=rbegin(); riter!=rend; ++riter, --last) {
             //簡易vector<T>のiteratorは単なるT *だが、
             //riterはリバースイテレーターなのでポインターではない。
@@ -52,11 +52,11 @@ public:
     vector(const allocator_type & alloc) noexcept : alloc(alloc) {}
     vector() : vector(allocator_type()) {}
     vector(size_type size, const allocator_type & alloc = Allocator()) : vector(alloc) {
-        std::cout << "Construct1\n";
+        std::cout << "Default Construct\n";
         resize(size);
     }
     vector(size_type size, const_reference value, const allocator_type & alloc = Allocator()) : vector(alloc) {
-        std::cout << "Construct2\n";
+        std::cout << "Copy Construct\n";
         resize(size, value);
     }
     template<typename InputIterator, typename = std::_RequireInputIter<InputIterator> >
@@ -73,8 +73,25 @@ public:
         clear();        //要素を末尾から先頭に向かう順番で破棄
         deallocate();   //生のメモリーを開放する
     }
-    vector(const vector &v);
-    vector &operator=(const vector &v);
+    vector(const vector &r) : alloc(traits::select_on_container_copy_construction(r.alloc)) {
+        reserve(r.size());
+        for (auto dest=first, src=r.begin(), last=r.end(); src!=last; ++dest, ++src)
+            construct(dest, *src);
+        last = first + r.size();
+    }
+    vector &operator=(const vector &r) {
+        if (this==&r) return *this;
+        if (size()==r.size()) {
+            std::copy(r.begin(), r.end(), begin());
+        } else {
+            destroy_until(rend());
+            reserve(r.size()) ;
+            for (auto dest=first, src=r.begin(), last=r.end(); src!=last; ++dest, ++src)
+                construct(dest, *src);
+            last = first + r.size();
+        }
+        return *this;
+    }
     reference       operator[](size_type i)       noexcept { return first[i]; }
     const_reference operator[](size_type i) const noexcept { return first[i]; }
     reference at(size_type i) {
@@ -200,4 +217,17 @@ int main() {
 
     vector<int> v4 = {1,2,3,4,5,6};
     std::cout << "v4" << v4 << std::endl;
+
+    vector<int> v5(v4);
+    std::cout << "v5" << v5 << std::endl;
+
+    vector<int> v6a(10,0);
+    std::cout << "v6a" << v6a << std::endl;
+    v6a = v5;
+    std::cout << "v6a" << v6a << std::endl;
+
+    vector<int> v6b(3,0);
+    std::cout << "v6b" << v6b << std::endl;
+    v6b = v5;
+    std::cout << "v6b" << v6b << std::endl;
 }
