@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <vector>
 #include <array>
+#include <string>
 
 template <typename T, typename Allocator = std::allocator<T>>
 class vector {
@@ -74,22 +75,40 @@ public:
         deallocate();   //生のメモリーを開放する
     }
     vector(const vector &r) : alloc(traits::select_on_container_copy_construction(r.alloc)) {
+        std::cout << "Copy Construct\n";
         reserve(r.size());
         for (auto dest=first, src=r.begin(), last=r.end(); src!=last; ++dest, ++src)
             construct(dest, *src);
         last = first + r.size();
+    }
+    vector(vector &&r) : first(r.first), last(r.last), reserved_last(r.reserved_last),
+            alloc(traits::select_on_container_copy_construction(r.alloc)) {
+        std::cout << "Move Construct\n";
+        r.first = nullptr;
+        r.last  = nullptr;
+        r.reserved_last = nullptr;
     }
     vector &operator=(const vector &r) {
         if (this==&r) return *this;
         if (size()==r.size()) {
             std::copy(r.begin(), r.end(), begin());
         } else {
-            destroy_until(rend());
+            clear();
             reserve(r.size()) ;
             for (auto dest=first, src=r.begin(), last=r.end(); src!=last; ++dest, ++src)
                 construct(dest, *src);
             last = first + r.size();
         }
+        return *this;
+    }
+    vector &operator=(vector &&r) {
+        clear();
+        first = r.first;
+        last  = r.last;
+        reserved_last = r.reserved_last;
+        r.first = nullptr;
+        r.last  = nullptr;
+        r.reserved_last = nullptr;
         return *this;
     }
     reference       operator[](size_type i)       noexcept { return first[i]; }
@@ -200,6 +219,21 @@ std::ostream &operator<<(std::ostream &os, const vector<T> &v) {
     return os;
 }
 
+void f( const int & ) { std::cout << "lvalue\n" ; }
+void f( int && )      { std::cout << "rvalue\n" ; }
+void g() {
+    int object { } ;
+    f( object ) ; // lvalue
+    f( object + object ) ; // rvalue
+    f( [=]{ return object ; }() ) ; // rvalue
+    f( std::move(object) ) ; // rvalue
+}
+
+vector<int> f7() {
+    vector<int> v = {1,2,3};
+    return v;
+}
+
 int main() {
     vector<int> v2(10,99);
     std::cout << "v2" << v2 << std::endl;
@@ -230,4 +264,17 @@ int main() {
     std::cout << "v6b" << v6b << std::endl;
     v6b = v5;
     std::cout << "v6b" << v6b << std::endl;
+
+//  vector<int> v7a([=]{return v4;}()); //moveにならない
+//  vector<int> v7a(f7());              //moveにならない
+    vector<int> v7a(std::move(v4));
+    std::cout << "v7a" << v7a << std::endl;
+    std::cout << "v4" << v4 << std::endl;
+
+    vector<int> v7b;
+    v7b = std::move(v5);
+    std::cout << "v7b" << v7b << std::endl;
+    std::cout << "v5" << v5 << std::endl;
+
+    g();
 }
